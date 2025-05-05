@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head><title>Socket.io Test</title></head>
+  <body>
+    <h1>Socket.io Test</h1>
+    <input id="msg" placeholder="Type message..." />
+    <button onclick="sendMessage()">Send</button>
+
+    <ul id="messages"></ul>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      const socket = io('http://localhost:8080'); // Change to your backend URL
+
+      socket.on('connect', () => {
+        console.log('✅ Connected to socket server:', socket.id);
+      });
+
+      socket.on('receive_message', (data) => {
+        console.log('📩 Message received:', data);
+        const li = document.createElement('li');
+        li.textContent = `${data.sender || 'Unknown'}: ${data.content}`;
+        document.getElementById('messages').appendChild(li);
+      });
+
+      function sendMessage() {
+        const content = document.getElementById('msg').value;
+        socket.emit('send_message', {
+          sender: 'test-client',
+          content,
+          timestamp: new Date()
+        });
+      }
+    </script>
+  </body>
+</html>
