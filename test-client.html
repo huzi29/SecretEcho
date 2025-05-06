@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
   <head><title>Socket.io Test</title></head>
   <body>
@@ -31,6 +31,144 @@
           timestamp: new Date()
         });
       }
+    </script>
+  </body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html>
+  <head><title>Socket.io Auth Test</title></head>
+  <body>
+    <h1>Socket.io Auth Test</h1>
+
+    <div id="login-section">
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="chat-section" style="display:none;">
+      <input id="msg" placeholder="Type message..." />
+      <button onclick="sendMessage()">Send</button>
+      <ul id="messages"></ul>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      let socket;
+      let token;
+
+      async function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch('http://localhost:8080/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await res.json();
+          if (res.ok && data.token) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            initSocket(); // Connect to socket only after login
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('chat-section').style.display = 'block';
+          } else {
+            alert('Login failed: ' + (data.message || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error('Login error:', err);
+        }
+      }
+
+      function initSocket() {
+        socket = io('http://localhost:8080', {
+          auth: { token },
+        });
+
+        socket.on('connect', () => {
+          console.log('✅ Connected to socket server:', socket.id);
+          socket.emit('init_user')
+        });
+
+        socket.on('receive_message', (data) => {
+          console.log('📩 Message received:', data);
+          const li = document.createElement('li');
+          li.textContent = `${data.sender || 'Unknown'}: ${data.content}`;
+          document.getElementById('messages').appendChild(li);
+        });
+
+  //       socket.on('chat_history', (messages) => {
+  //   console.log('📚 Chat history loaded');
+  //   messages.forEach((data) => {
+  //     const li = document.createElement('li');
+  //     li.textContent = `${data.sender}: ${data.content}`;
+  //     document.getElementById('messages').appendChild(li);
+  //   });
+  // });
+      }
+
+      // function sendMessage() {
+      //   const content = document.getElementById('msg').value;
+      //   socket.emit('send_message', {
+      //     // sender: 'test-client',
+      //     content,
+      //     timestamp: new Date(),
+      //   });
+      // }
+
+      function sendMessage() {
+        const content = document.getElementById('msg').value;
+        if (socket && content.trim()) {
+          socket.emit('send_message', {
+            content,
+            timestamp: new Date(),
+          });
+          document.getElementById('msg').value = ''; // Clear input
+        }
+      }
+
+      async function fetchMessagesByUser(userId) {
+        try {
+          const res = await fetch(`http://localhost:8080/api/messages/user/${userId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          const messages = await res.json();
+          console.log('📚 Fetched messages for user:', messages);
+          messages.forEach((data) => {
+            const li = document.createElement('li');
+            li.textContent = `${data.sender}: ${data.content}`;
+            document.getElementById('messages').appendChild(li);
+          });
+        } catch (err) {
+          console.error('Error fetching messages:', err);
+        }
+      }
+
+      function logout() {
+        // Disconnect the socket
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+        }
+
+        // Clear local storage and reset UI
+        localStorage.removeItem('token');
+        token = null;
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('chat-section').style.display = 'none';
+        document.getElementById('messages').innerHTML = ''; // Clear chat
+      }
+
     </script>
   </body>
 </html>

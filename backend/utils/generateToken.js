@@ -5,9 +5,9 @@ dotenv.config();
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: '1h',
   });
 };
-console.log("jwt",process.env.JWT_SECRET)
+// console.log("jwt",process.env.JWT_SECRET)
 
 export default generateToken;
